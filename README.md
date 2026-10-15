@@ -1,36 +1,45 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Serat Cerita
 
-## Getting Started
+Toko online rajutan handmade — dibangun dengan Next.js (App Router), React 19, dan Tailwind CSS v4.
 
-First, run the development server:
+## Fitur
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- **Beranda** — hero, koleksi unggulan, form custom order, dan cerita brand.
+- **Shop** (`/shop`) — semua produk dengan filter kategori dan pencarian (`?q=`, `?category=`).
+- **Detail produk** (`/products/[slug]`) — dibuat statis saat build dari `lib/products.ts`.
+- **Wishlist** (`/wishlist`) dan **Keranjang** (`/cart`) — tersimpan di `localStorage` browser.
+- **Checkout & custom order via WhatsApp** — pesan otomatis terisi daftar pesanan/detail custom.
+
+## Struktur
+
+```
+app/                 Routing (halaman, layout, not-found)
+components/
+  layout/            Header & Footer
+  home/              Section beranda (Hero, FeaturedCollection, CustomOrder, Story)
+  product/           ProductCard, WishlistButton, AddToCart
+  cart/              CartView & WishlistView
+  ui/styles.ts       Kelas tombol/teks yang dipakai ulang
+lib/
+  products.ts        Data katalog produk
+  site.ts            Konfigurasi toko, navigasi, format Rupiah, link WhatsApp
+  store.ts           State keranjang & wishlist (useSyncExternalStore + localStorage)
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Warna brand didefinisikan sebagai token Tailwind di `app/globals.css`
+(`bg-cream`, `bg-linen`, `text-cocoa`, `text-umber`, `border-line`, dst.).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Menjalankan
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+cp .env.example .env.local   # isi NEXT_PUBLIC_WHATSAPP_NUMBER
+npm install
+npm run dev
+```
 
-## Learn More
+Buka [http://localhost:3000](http://localhost:3000).
 
-To learn more about Next.js, take a look at the following resources:
+## Menambah produk
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Tambahkan entri baru di `lib/products.ts`. Set `price: null` untuk produk yang belum dijual
+(akan tampil sebagai *Coming Soon* dan tidak bisa dimasukkan ke keranjang).
