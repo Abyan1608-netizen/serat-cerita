@@ -1,31 +1,42 @@
 @import "tailwindcss";
 
-@theme inline {
-  --font-sans: var(--font-geist-sans);
-  --font-serif: var(--font-cormorant);
+/*
+ * Warna toko diatur dari halaman admin (Tampilan → Warna & Font) dan dipasang
+ * sebagai variabel --c-* oleh app/(store)/layout.tsx. Nilai di :root cadangan.
+ */
+:root {
+  --c-bg: #f7f2ea;
+  --c-surface: #f1e9df;
+  --c-surface-strong: #e1d3c3;
+  --c-line: #ded2c5;
+  --c-ink: #3f2a20;
+  --c-ink-muted: #735c4d;
+  --c-accent: #8a6048;
+  --c-primary: #3f2a20;
+  --c-on-primary: #f7f2ea;
+  --c-footer: #3f2a20;
+  --c-on-footer: #f7f2ea;
+  --heading-font: var(--font-cormorant);
 }
 
-/* Palet warna Serat Cerita — dipakai sebagai utilitas Tailwind, mis. bg-cream, text-cocoa. */
-@theme {
-  --color-cream: #f7f2ea;
-  --color-linen: #f1e9df;
-  --color-mist: #ede3d8;
-  --color-line: #ded2c5;
-  --color-sand: #ded0bf;
-  --color-oat: #e1d3c3;
-  --color-taupe: #b7a392;
-  --color-umber: #8a6048;
-  --color-muted: #735c4d;
-  --color-cocoa-soft: #634638;
-  --color-cocoa: #3f2a20;
+@theme inline {
+  --font-sans: var(--font-geist-sans);
+  --font-heading: var(--heading-font);
+
+  --color-bg: var(--c-bg);
+  --color-surface: var(--c-surface);
+  --color-surface-strong: var(--c-surface-strong);
+  --color-line: var(--c-line);
+  --color-ink: var(--c-ink);
+  --color-ink-muted: var(--c-ink-muted);
+  --color-accent: var(--c-accent);
+  --color-primary: var(--c-primary);
+  --color-on-primary: var(--c-on-primary);
+  --color-footer: var(--c-footer);
+  --color-on-footer: var(--c-on-footer);
 }
 
 html {
   scroll-behavior: smooth;
   scroll-padding-top: 7rem;
-}
-
-body {
-  background: var(--color-cream);
-  color: var(--color-cocoa);
 }

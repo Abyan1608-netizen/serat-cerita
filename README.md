@@ -1,45 +1,55 @@
 # Serat Cerita
 
-Toko online rajutan handmade — dibangun dengan Next.js (App Router), React 19, dan Tailwind CSS v4.
+Toko online rajutan handmade: katalog produk, keranjang & checkout, pembayaran
+Midtrans, notifikasi pesanan ke Telegram, serta panel admin untuk pesanan, produk,
+laporan keuangan, dan pengaturan tampilan (teks, foto, warna, font, ongkir).
 
-## Fitur
+**Pemilik toko:** ikuti [PANDUAN.md](PANDUAN.md) untuk memasang website.
 
-- **Beranda** — hero, koleksi unggulan, form custom order, dan cerita brand.
-- **Shop** (`/shop`) — semua produk dengan filter kategori dan pencarian (`?q=`, `?category=`).
-- **Detail produk** (`/products/[slug]`) — dibuat statis saat build dari `lib/products.ts`.
-- **Wishlist** (`/wishlist`) dan **Keranjang** (`/cart`) — tersimpan di `localStorage` browser.
-- **Checkout & custom order via WhatsApp** — pesan otomatis terisi daftar pesanan/detail custom.
+## Teknologi
+
+- Next.js 16 (App Router) + React 19 + Tailwind CSS v4
+- Supabase: Postgres (dengan Row Level Security), Auth (login admin), Storage (foto)
+- Midtrans Snap (pembayaran), Telegram Bot API (notifikasi)
 
 ## Struktur
 
 ```
-app/                 Routing (halaman, layout, not-found)
+app/
+  (store)/            Toko: beranda, produk, keranjang, checkout, status & lacak pesanan
+  admin/              Login, setup admin pertama, panel admin ((panel)/…)
+  api/midtrans/       Webhook notifikasi pembayaran
 components/
-  layout/            Header & Footer
-  home/              Section beranda (Hero, FeaturedCollection, CustomOrder, Story)
-  product/           ProductCard, WishlistButton, AddToCart
-  cart/              CartView & WishlistView
-  ui/styles.ts       Kelas tombol/teks yang dipakai ulang
+  store/              Komponen toko
+  admin/              Komponen admin (editor tampilan, form produk, grafik, dll.)
 lib/
-  products.ts        Data katalog produk
-  site.ts            Konfigurasi toko, navigasi, format Rupiah, link WhatsApp
-  store.ts           State keranjang & wishlist (useSyncExternalStore + localStorage)
+  settings.ts         Skema & nilai bawaan pengaturan toko (teks, warna, font, ongkir)
+  theme.ts            Pengaturan → variabel CSS (--c-*) untuk tema
+  data.ts             Query publik (produk, kategori, pengaturan)
+  orders.ts           Kode pesanan, sinkronisasi status Midtrans, notifikasi
+  reports.ts          Ringkasan penjualan & laporan laba rugi
+  midtrans.ts, telegram.ts, auth.ts, cart.ts, format.ts
+  supabase/           Klien Supabase (browser, server/cookie, publik, service role)
+supabase/schema.sql   Tabel, fungsi (place_order, set_order_status, apply_payment_status), RLS, storage
+proxy.ts              Penyegaran sesi & pengalihan login untuk /admin
 ```
 
-Warna brand didefinisikan sebagai token Tailwind di `app/globals.css`
-(`bg-cream`, `bg-linen`, `text-cocoa`, `text-umber`, `border-line`, dst.).
+## Prinsip keamanan
 
-## Menjalankan
+- Harga, stok, dan total dihitung ulang di database (`place_order`), bukan di browser.
+- Stok dikunci saat pesanan dibuat dan dikembalikan bila dibatalkan/kedaluwarsa.
+- Webhook Midtrans diverifikasi dengan signature, lalu status dicek ulang ke API Midtrans
+  dan nominal dicocokkan dengan total pesanan.
+- Pengunjung hanya bisa membaca produk, kategori, dan pengaturan publik; kolom modal (HPP),
+  pesanan, pengeluaran, dan pengaturan rahasia hanya untuk admin (RLS).
+- Setiap halaman & aksi admin memanggil `requireAdmin()`.
+
+## Pengembangan lokal
 
 ```bash
-cp .env.example .env.local   # isi NEXT_PUBLIC_WHATSAPP_NUMBER
+cp .env.example .env.local   # isi nilai Supabase dst.
 npm install
 npm run dev
 ```
 
-Buka [http://localhost:3000](http://localhost:3000).
-
-## Menambah produk
-
-Tambahkan entri baru di `lib/products.ts`. Set `price: null` untuk produk yang belum dijual
-(akan tampil sebagai *Coming Soon* dan tidak bisa dimasukkan ke keranjang).
+Pemeriksaan: `npx tsc --noEmit`, `npm run lint`, `npm run build`.
