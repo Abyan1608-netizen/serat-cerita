@@ -59,6 +59,7 @@ const refundSchema = z.object({
   method: z.string().trim().min(1, "Isi cara pengembalian dana").max(120),
   note: z.string().trim().max(500),
   restock: z.boolean(),
+  requestId: z.uuid().optional(),
 });
 
 export async function recordRefund(input: z.input<typeof refundSchema>): Promise<ActionResult> {
@@ -77,6 +78,14 @@ export async function recordRefund(input: z.input<typeof refundSchema>): Promise
   });
   if (error) return fail(error.message);
 
+  if (r.requestId) {
+    await supabase
+      .from("refund_requests")
+      .update({ status: "approved", resolved_at: new Date().toISOString() })
+      .eq("id", r.requestId)
+      .eq("order_id", r.orderId);
+  }
+
   const { data: order } = await supabase
     .from("orders")
     .select("code, customer_name, total, refunded_total")
@@ -92,6 +101,23 @@ export async function recordRefund(input: z.input<typeof refundSchema>): Promise
 
   refreshAll();
   return { ok: true, message: "Refund dicatat" };
+}
+
+export async function rejectRefundRequest(requestId: string, note: string): Promise<ActionResult> {
+  const { supabase } = await requireAdmin();
+  const parsed = z
+    .object({ id: z.uuid(), note: z.string().trim().min(3, "Tulis alasan penolakan").max(500) })
+    .safeParse({ id: requestId, note });
+  if (!parsed.success) return fail(parsed.error.issues[0].message);
+
+  const { error } = await supabase
+    .from("refund_requests")
+    .update({ status: "rejected", admin_note: parsed.data.note, resolved_at: new Date().toISOString() })
+    .eq("id", parsed.data.id)
+    .eq("status", "pending");
+  if (error) return fail(error.message);
+  refreshAll();
+  return { ok: true, message: "Permintaan ditolak" };
 }
 
 // ---------------------------------------------------------------- Produk

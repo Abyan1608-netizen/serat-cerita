@@ -3,10 +3,13 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CreditCard, MessageCircle, RefreshCw } from "lucide-react";
 import Heading from "@/components/store/Heading";
+import OrderActions from "@/components/store/OrderActions";
 import { buttonOutline, buttonPrimary, eyebrow } from "@/components/store/ui";
 import { getSettings } from "@/lib/data";
 import { formatDate, formatRupiah, isPaid, orderStatusLabels, whatsappLink } from "@/lib/format";
 import { getOrderByCode, syncPendingOrder } from "@/lib/orders";
+import { createAdminClient } from "@/lib/supabase/admin";
+import type { RefundRequest } from "@/lib/types";
 
 export const metadata: Metadata = { title: "Status pesanan", robots: { index: false } };
 
@@ -17,7 +20,17 @@ export default async function OrderPage(props: PageProps<"/pesanan/[code]">) {
   const found = await getOrderByCode(decodeURIComponent(code).toUpperCase());
   if (!found) notFound();
 
-  const [order, settings] = await Promise.all([syncPendingOrder(found), getSettings()]);
+  const [order, settings, { data: requests }] = await Promise.all([
+    syncPendingOrder(found),
+    getSettings(),
+    createAdminClient()
+      .from("refund_requests")
+      .select("status, admin_note, created_at")
+      .eq("order_id", found.id)
+      .order("created_at", { ascending: false })
+      .limit(1),
+  ]);
+  const latestRequest = (requests?.[0] ?? null) as Pick<RefundRequest, "status" | "admin_note" | "created_at"> | null;
   const wa = settings.store.whatsapp;
   const current = steps.indexOf(order.status as (typeof steps)[number]);
   const closed = ["cancelled", "expired", "refunded"].includes(order.status);
@@ -126,6 +139,13 @@ export default async function OrderPage(props: PageProps<"/pesanan/[code]">) {
             <p className="whitespace-pre-line">{order.address}</p>
           </div>
         </div>
+
+        <OrderActions
+          code={order.code}
+          status={order.status}
+          refundable={order.refunded_total < order.total}
+          request={latestRequest}
+        />
 
         {wa && (
           <a

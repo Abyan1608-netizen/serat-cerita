@@ -3,20 +3,23 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { MessageCircle } from "lucide-react";
-import { recordRefund } from "@/app/admin/actions";
+import { recordRefund, rejectRefundRequest } from "@/app/admin/actions";
 import MoneyInput from "@/components/admin/MoneyInput";
 import { adminButton, adminButtonOutline, adminHint, adminInput, adminLabel } from "@/components/admin/ui";
 import { formatDate, formatRupiah, whatsappLink } from "@/lib/format";
-import type { Order, Refund } from "@/lib/types";
+import type { Order, Refund, RefundRequest } from "@/lib/types";
 
 export default function RefundPanel({
   order,
   refunds,
   canRefund,
+  request,
 }: {
   order: Pick<Order, "id" | "code" | "customer_name" | "customer_phone" | "total" | "refunded_total">;
   refunds: Refund[];
   canRefund: boolean;
+  /** Permintaan refund dari pembeli yang masih menunggu, bila ada. */
+  request: RefundRequest | null;
 }) {
   const router = useRouter();
   const remaining = order.total - order.refunded_total;
@@ -28,7 +31,19 @@ export default function RefundPanel({
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<{ amount: number; method: string } | null>(null);
   const [pending, startTransition] = useTransition();
+  const [approving, setApproving] = useState(false);
   const full = amount === remaining;
+
+  function reject() {
+    if (!request) return;
+    const note = prompt("Alasan penolakan (akan dilihat pembeli):");
+    if (!note) return;
+    startTransition(async () => {
+      const result = await rejectRefundRequest(request.id, note);
+      if (!result.ok) setError(result.error);
+      router.refresh();
+    });
+  }
 
   function submit() {
     setError(null);
@@ -42,13 +57,21 @@ export default function RefundPanel({
     if (!confirm(message)) return;
 
     startTransition(async () => {
-      const result = await recordRefund({ orderId: order.id, amount, method, note, restock: full && restock });
+      const result = await recordRefund({
+        orderId: order.id,
+        amount,
+        method,
+        note,
+        restock: full && restock,
+        requestId: approving && request ? request.id : undefined,
+      });
       if (!result.ok) {
         setError(result.error);
         return;
       }
       setDone({ amount, method });
       setOpen(false);
+      setApproving(false);
       setNote("");
       router.refresh();
     });
@@ -60,6 +83,37 @@ export default function RefundPanel({
         Dikembalikan: <strong className="tabular-nums">{formatRupiah(order.refunded_total)}</strong> dari{" "}
         <span className="tabular-nums">{formatRupiah(order.total)}</span>
       </p>
+
+      {request && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-amber-950">
+          <p className="font-medium">Pembeli meminta pembatalan / refund</p>
+          <p className="mt-1 text-xs text-amber-800">{formatDate(request.created_at, true)}</p>
+          <p className="mt-2"><span className="text-amber-800">Alasan:</span> {request.reason}</p>
+          <p className="mt-1"><span className="text-amber-800">Tujuan dana:</span> {request.refund_account}</p>
+          {!open && (
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button
+                type="button"
+                disabled={pending || !canRefund}
+                onClick={() => {
+                  setAmount(remaining);
+                  setMethod(request.refund_account);
+                  setNote(request.reason);
+                  setApproving(true);
+                  setOpen(true);
+                  setDone(null);
+                }}
+                className={adminButton}
+              >
+                Setujui & catat refund
+              </button>
+              <button type="button" disabled={pending} onClick={reject} className={adminButtonOutline}>
+                Tolak
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       {refunds.length > 0 && (
         <ul className="divide-y divide-stone-100 rounded-xl border border-stone-200">
@@ -96,7 +150,7 @@ export default function RefundPanel({
         </div>
       )}
 
-      {canRefund && remaining > 0 && !open && (
+      {canRefund && remaining > 0 && !open && !request && (
         <button
           type="button"
           onClick={() => {
@@ -155,7 +209,14 @@ export default function RefundPanel({
             <button type="submit" disabled={pending} className={adminButton}>
               {pending ? "Menyimpan…" : "Simpan refund"}
             </button>
-            <button type="button" onClick={() => setOpen(false)} className={adminButtonOutline}>
+            <button
+              type="button"
+              onClick={() => {
+                setOpen(false);
+                setApproving(false);
+              }}
+              className={adminButtonOutline}
+            >
               Batal
             </button>
           </div>

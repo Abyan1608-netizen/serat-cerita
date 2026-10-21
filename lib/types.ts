@@ -83,6 +83,17 @@ export type Refund = {
   refunded_at: string;
 };
 
+export type RefundRequest = {
+  id: string;
+  order_id: string;
+  reason: string;
+  refund_account: string;
+  status: "pending" | "approved" | "rejected";
+  admin_note: string;
+  created_at: string;
+  resolved_at: string | null;
+};
+
 export type Expense = {
   id: string;
   spent_on: string;

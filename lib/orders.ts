@@ -58,6 +58,11 @@ export async function applyPaymentStatus(
 ): Promise<Order> {
   const next = mapTransactionStatus(status);
   if (!next || next === "pending_payment" || next === order.status) return order;
+  // Nominal di Midtrans harus sama persis dengan total pesanan.
+  if (Number(status.gross_amount) !== order.total) {
+    console.error(`Nominal Midtrans tidak cocok untuk ${order.code}: ${status.gross_amount} ≠ ${order.total}`);
+    return order;
+  }
 
   const supabase = createAdminClient();
   const { data: changed, error } = await supabase.rpc("apply_payment_status", {

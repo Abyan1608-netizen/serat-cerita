@@ -8,7 +8,7 @@ import { adminButtonOutline, adminCard } from "@/components/admin/ui";
 import { requireAdmin } from "@/lib/auth";
 import { formatDate, formatRupiah, isPaid, whatsappLink } from "@/lib/format";
 import { syncPendingOrder } from "@/lib/orders";
-import type { Order, Refund } from "@/lib/types";
+import type { Order, Refund, RefundRequest } from "@/lib/types";
 
 export const metadata = { title: "Detail pesanan" };
 
@@ -24,6 +24,12 @@ export default async function OrderDetailPage(props: PageProps<"/admin/pesanan/[
     .eq("order_id", order.id)
     .order("refunded_at");
   const refunds = (refundRows ?? []) as Refund[];
+  const { data: requestRow } = await supabase
+    .from("refund_requests")
+    .select("*")
+    .eq("order_id", order.id)
+    .eq("status", "pending")
+    .maybeSingle();
 
   const hpp = (order.order_items ?? []).reduce((sum, item) => sum + item.cost * item.quantity, 0);
 
@@ -122,6 +128,7 @@ export default async function OrderDetailPage(props: PageProps<"/admin/pesanan/[
               order={order}
               refunds={refunds}
               canRefund={isPaid(order.status) && order.status !== "refunded"}
+              request={(requestRow ?? null) as RefundRequest | null}
             />
           </section>
 

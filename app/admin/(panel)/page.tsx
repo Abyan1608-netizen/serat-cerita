@@ -29,10 +29,26 @@ export default async function DashboardPage() {
   const { supabase } = await requireAdmin();
   await expireStaleOrders();
   const d = await getDashboard(supabase);
+  const { count: refundRequests } = await supabase
+    .from("refund_requests")
+    .select("id", { count: "exact", head: true })
+    .eq("status", "pending");
 
   return (
     <>
       <PageHeader title="Ringkasan penjualan" description={`Data bulan ${monthLabel(d.month)} (waktu WIB).`} />
+
+      {(refundRequests ?? 0) > 0 && (
+        <Link
+          href="/admin/pesanan?refund=pending"
+          className="mb-4 flex items-center justify-between gap-4 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-950 hover:bg-amber-100"
+        >
+          <span>
+            <strong>{refundRequests}</strong> permintaan pembatalan/refund dari pembeli menunggu keputusan Anda.
+          </span>
+          <span className="shrink-0 underline">Tinjau</span>
+        </Link>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Stat

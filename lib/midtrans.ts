@@ -64,6 +64,19 @@ export async function createSnapTransaction(input: {
   return data;
 }
 
+/** Batalkan tagihan yang belum dibayar agar tidak bisa dibayar lagi. Tidak melempar error. */
+export async function cancelTransaction(orderCode: string): Promise<void> {
+  try {
+    await fetch(`${urls().api}/${encodeURIComponent(orderCode)}/cancel`, {
+      method: "POST",
+      headers: { Accept: "application/json", Authorization: authHeader() },
+      cache: "no-store",
+    });
+  } catch (error) {
+    console.error("Gagal membatalkan transaksi Midtrans:", error);
+  }
+}
+
 export type MidtransStatus = {
   order_id: string;
   status_code: string;

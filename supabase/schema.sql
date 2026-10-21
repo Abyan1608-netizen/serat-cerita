@@ -135,6 +135,23 @@ create table if not exists public.refunds (
 create index if not exists refunds_order_idx on public.refunds (order_id);
 create index if not exists refunds_refunded_at_idx on public.refunds (refunded_at desc);
 
+-- Permintaan pembatalan/refund dari pembeli (ditinjau admin).
+create table if not exists public.refund_requests (
+  id uuid primary key default gen_random_uuid(),
+  order_id uuid not null references public.orders (id) on delete cascade,
+  reason text not null,
+  refund_account text not null,
+  status text not null default 'pending'
+    check (status in ('pending', 'approved', 'rejected')),
+  admin_note text not null default '',
+  created_at timestamptz not null default now(),
+  resolved_at timestamptz
+);
+create index if not exists refund_requests_order_idx on public.refund_requests (order_id);
+-- Satu permintaan aktif per pesanan.
+create unique index if not exists refund_requests_one_pending
+  on public.refund_requests (order_id) where status = 'pending';
+
 -- ---------------------------------------------------------------------
 -- Pengeluaran (untuk laporan keuangan)
 -- ---------------------------------------------------------------------
@@ -415,6 +432,7 @@ alter table public.orders enable row level security;
 alter table public.order_items enable row level security;
 alter table public.expenses enable row level security;
 alter table public.refunds enable row level security;
+alter table public.refund_requests enable row level security;
 
 drop policy if exists "admins: admin baca" on public.admins;
 create policy "admins: admin baca" on public.admins
@@ -456,6 +474,10 @@ create policy "order_items: admin" on public.order_items
 drop policy if exists "refunds: admin baca" on public.refunds;
 create policy "refunds: admin baca" on public.refunds
   for select to authenticated using (public.is_admin());
+
+drop policy if exists "refund_requests: admin" on public.refund_requests;
+create policy "refund_requests: admin" on public.refund_requests
+  for all to authenticated using (public.is_admin()) with check (public.is_admin());
 
 drop policy if exists "expenses: admin" on public.expenses;
 create policy "expenses: admin" on public.expenses

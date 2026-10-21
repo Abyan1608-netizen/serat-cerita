@@ -22,6 +22,7 @@ export default async function OrdersPage(props: PageProps<"/admin/pesanan">) {
   await expireStaleOrders();
   const params = await props.searchParams;
   const status = typeof params.status === "string" ? params.status : "";
+  const onlyRequests = params.refund === "pending";
   const q = typeof params.q === "string" ? params.q.trim() : "";
 
   let query = supabase
@@ -29,6 +30,9 @@ export default async function OrdersPage(props: PageProps<"/admin/pesanan">) {
     .select("id, code, customer_name, customer_phone, total, status, created_at, shipping_name")
     .order("created_at", { ascending: false })
     .limit(100);
+  const { data: requestRows } = await supabase.from("refund_requests").select("order_id").eq("status", "pending");
+  const requested = new Set((requestRows ?? []).map((row) => row.order_id as string));
+  if (onlyRequests) query = query.in("id", [...requested, "00000000-0000-0000-0000-000000000000"]);
   if (status && status in orderStatusLabels) query = query.eq("status", status);
   if (q) {
     const safe = q.replace(/[%,()]/g, " ");
@@ -56,12 +60,20 @@ export default async function OrdersPage(props: PageProps<"/admin/pesanan">) {
               key={filter.value || "all"}
               href={href(filter.value)}
               className={`rounded-full px-3 py-1.5 text-xs font-medium ${
-                filter.value === status ? "bg-stone-900 text-white" : "bg-white text-stone-700 ring-1 ring-stone-200 hover:bg-stone-50"
+                filter.value === status && !onlyRequests ? "bg-stone-900 text-white" : "bg-white text-stone-700 ring-1 ring-stone-200 hover:bg-stone-50"
               }`}
             >
               {filter.label}
             </Link>
           ))}
+          <Link
+            href="/admin/pesanan?refund=pending"
+            className={`rounded-full px-3 py-1.5 text-xs font-medium ${
+              onlyRequests ? "bg-amber-600 text-white" : "bg-amber-50 text-amber-900 ring-1 ring-amber-200 hover:bg-amber-100"
+            }`}
+          >
+            Minta refund ({requested.size})
+          </Link>
         </nav>
         <form className="lg:w-72">
           {status && <input type="hidden" name="status" value={status} />}
@@ -95,7 +107,14 @@ export default async function OrdersPage(props: PageProps<"/admin/pesanan">) {
                     <p className="text-xs text-stone-500">{order.customer_phone}</p>
                   </td>
                   <td className="px-5 py-3 text-stone-600">{order.shipping_name}</td>
-                  <td className="px-5 py-3"><StatusBadge status={order.status} /></td>
+                  <td className="px-5 py-3">
+                    <StatusBadge status={order.status} />
+                    {requested.has(order.id) && (
+                      <span className="ml-1 inline-flex rounded-full bg-amber-50 px-2 py-1 text-xs font-medium text-amber-900 ring-1 ring-inset ring-amber-200">
+                        Minta refund
+                      </span>
+                    )}
+                  </td>
                   <td className="px-5 py-3 text-right font-medium tabular-nums">{formatRupiah(order.total)}</td>
                 </tr>
               ))}

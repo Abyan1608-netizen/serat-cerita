@@ -145,6 +145,12 @@ Virtual Account ± Rp 4.000 per transaksi — cek tarif terbaru di situs Midtran
 3. Untuk refund penuh, centang **Kembalikan stok** bila barangnya kembali/belum dikirim.
 4. Tekan **Kabari pembeli via WhatsApp** untuk memberi tahu pembeli.
 
+**Dari sisi pembeli** (di halaman status pesanan, setelah memasukkan nomor WA yang dipakai memesan):
+- Pesanan **belum dibayar** → tombol **Batalkan pesanan**: langsung batal, stok kembali, tagihan Midtrans dibatalkan.
+- Pesanan **sudah dibayar** → tombol **Ajukan pembatalan / refund**: pembeli mengisi alasan dan rekening/e-wallet
+  tujuan. Anda mendapat notifikasi Telegram, lalu di **Admin → Pesanan** (tab **Minta refund**) pilih
+  **Setujui & catat refund** (form terisi otomatis) atau **Tolak** (alasannya terlihat oleh pembeli).
+
 Refund otomatis mengurangi laporan keuangan pada bulan dana dikembalikan, muncul di unduhan
 Excel, dan pembeli melihat status **Dana dikembalikan** di halaman pesanannya.
 
