@@ -24,6 +24,7 @@ type FieldDef = {
   label: string;
   hint?: string;
   type?: "text" | "textarea" | "image" | "toggle" | "tel";
+  rows?: number;
 };
 
 const tabs = [
@@ -31,6 +32,7 @@ const tabs = [
   { id: "home", label: "Beranda" },
   { id: "custom", label: "Pesanan custom" },
   { id: "story", label: "Cerita" },
+  { id: "policies", label: "Kebijakan" },
   { id: "design", label: "Warna & Font" },
   { id: "checkout", label: "Ongkir & Checkout" },
 ] as const;
@@ -47,6 +49,8 @@ const fields: Record<Exclude<TabId, "design" | "checkout">, FieldDef[]> = {
     { section: "store", key: "whatsapp", label: "Nomor WhatsApp toko", hint: "Boleh diketik 08xx — otomatis diubah ke format 628xx. Dipakai untuk tombol chat.", type: "tel" },
     { section: "store", key: "instagram", label: "Instagram", hint: "Contoh: @seratcerita" },
     { section: "store", key: "email", label: "Email toko" },
+    { section: "store", key: "address", label: "Alamat toko", hint: "Tampil di halaman Kontak. Boleh alamat kota/kecamatan saja.", type: "textarea" },
+    { section: "store", key: "hours", label: "Jam layanan", hint: "Contoh: Senin – Sabtu, 09.00 – 17.00 WIB" },
     { section: "footer", key: "tagline", label: "Tulisan di bagian bawah (footer)" },
   ],
   home: [
@@ -73,8 +77,13 @@ const fields: Record<Exclude<TabId, "design" | "checkout">, FieldDef[]> = {
   story: [
     { section: "story", key: "eyebrow", label: "Tulisan kecil" },
     { section: "story", key: "title", label: "Judul" },
-    { section: "story", key: "body", label: "Isi cerita", hint: "Pisahkan paragraf dengan satu baris kosong.", type: "textarea" },
+    { section: "story", key: "body", label: "Isi cerita", hint: "Pisahkan paragraf dengan satu baris kosong.", type: "textarea", rows: 8 },
     { section: "story", key: "image", label: "Foto (opsional)", type: "image" },
+  ],
+  policies: [
+    { section: "policies", key: "terms", label: "Syarat & Ketentuan", hint: "Pisahkan bagian dengan satu baris kosong. Link-nya ada di bagian bawah website.", type: "textarea", rows: 14 },
+    { section: "policies", key: "refund", label: "Kebijakan Pengembalian Dana", type: "textarea", rows: 12 },
+    { section: "policies", key: "privacy", label: "Kebijakan Privasi", type: "textarea", rows: 12 },
   ],
 };
 
@@ -167,7 +176,7 @@ export default function SettingsEditor({ initial }: { initial: StoreSettings }) 
         {field.label}
         {field.hint && <span className={adminHint}>{field.hint}</span>}
         {field.type === "textarea" ? (
-          <textarea rows={field.key === "body" && field.section === "story" ? 8 : 3} value={String(value ?? "")} onChange={(e) => set(e.target.value)} className={adminInput} />
+          <textarea rows={field.rows ?? 3} value={String(value ?? "")} onChange={(e) => set(e.target.value)} className={adminInput} />
         ) : (
           <input
             type={field.type === "tel" ? "tel" : "text"}
