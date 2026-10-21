@@ -1,7 +1,9 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { dateKey, PAID_STATUSES } from "@/lib/format";
-import type { Expense, Order, OrderItem } from "@/lib/types";
+import type { Expense, Order, OrderItem, Refund } from "@/lib/types";
+
+export type RefundRow = Refund & { order: Pick<Order, "code" | "customer_name"> | null };
 
 type PaidOrder = Pick<Order, "id" | "code" | "subtotal" | "shipping_cost" | "total" | "paid_at"> & {
   order_items: Pick<OrderItem, "product_id" | "product_name" | "price" | "cost" | "quantity">[];
@@ -41,6 +43,25 @@ async function paidOrdersBetween(supabase: SupabaseClient, from: string, to: str
   return data as PaidOrder[];
 }
 
+async function refundsBetween(supabase: SupabaseClient, from: string, to: string): Promise<RefundRow[]> {
+  const { data, error } = await supabase
+    .from("refunds")
+    .select("*, order:orders(code, customer_name)")
+    .gte("refunded_at", from)
+    .lt("refunded_at", to)
+    .order("refunded_at", { ascending: false });
+  // Bila tabel refunds belum dibuat (schema.sql belum dijalankan ulang), anggap kosong.
+  if (error) return [];
+  return data as RefundRow[];
+}
+
+function refundTotals(refunds: RefundRow[]) {
+  return {
+    refunds: refunds.reduce((sum, r) => sum + r.amount, 0),
+    cogsReversed: refunds.reduce((sum, r) => sum + r.cogs_reversed, 0),
+  };
+}
+
 function totals(orders: PaidOrder[]) {
   let sales = 0;
   let shipping = 0;
@@ -64,8 +85,9 @@ export async function getDashboard(supabase: SupabaseClient) {
   const sinceKey = dateKey(since);
   const from = [`${sinceKey}T00:00:00+07:00`, monthStart(month)].sort()[0];
 
-  const [orders, pending, toProcess, recent] = await Promise.all([
+  const [orders, refunds, pending, toProcess, recent] = await Promise.all([
     paidOrdersBetween(supabase, from, monthStart(shiftMonth(month, 1))),
+    refundsBetween(supabase, from, monthStart(shiftMonth(month, 1))),
     supabase.from("orders").select("id", { count: "exact", head: true }).eq("status", "pending_payment"),
     supabase.from("orders").select("id", { count: "exact", head: true }).in("status", ["paid", "processing"]),
     supabase.from("orders").select("id, code, customer_name, total, status, created_at").order("created_at", { ascending: false }).limit(8),
@@ -96,8 +118,11 @@ export async function getDashboard(supabase: SupabaseClient) {
 
   return {
     month,
-    today: totals(todayOrders),
-    thisMonth: totals(monthOrders),
+    today: { ...totals(todayOrders), ...refundTotals(refunds.filter((r) => dateKey(r.refunded_at) === today)) },
+    thisMonth: {
+      ...totals(monthOrders),
+      ...refundTotals(refunds.filter((r) => dateKey(r.refunded_at).startsWith(month))),
+    },
     pendingPayment: pending.count ?? 0,
     toProcess: toProcess.count ?? 0,
     daily: [...byDay].map(([date, value]) => ({ date, value })),
@@ -108,8 +133,9 @@ export async function getDashboard(supabase: SupabaseClient) {
 
 export async function getFinance(supabase: SupabaseClient, month: string) {
   const firstMonth = shiftMonth(month, -11);
-  const [orders, expensesResult] = await Promise.all([
+  const [orders, refunds, expensesResult] = await Promise.all([
     paidOrdersBetween(supabase, monthStart(firstMonth), monthStart(shiftMonth(month, 1))),
+    refundsBetween(supabase, monthStart(firstMonth), monthStart(shiftMonth(month, 1))),
     supabase
       .from("expenses")
       .select("*")
@@ -124,7 +150,10 @@ export async function getFinance(supabase: SupabaseClient, month: string) {
   const rows = months.map((m) => {
     const t = totals(orders.filter((order) => dateKey(order.paid_at!).startsWith(m)));
     const spent = expenses.filter((e) => e.spent_on.startsWith(m)).reduce((sum, e) => sum + e.amount, 0);
-    return { month: m, ...t, expenses: spent, profit: t.sales - t.cogs - spent };
+    const r = refundTotals(refunds.filter((x) => dateKey(x.refunded_at).startsWith(m)));
+    // Refund mengurangi penjualan; bila stok dikembalikan, modal barangnya juga batal terpakai.
+    const cogs = t.cogs - r.cogsReversed;
+    return { month: m, ...t, ...r, cogs, expenses: spent, profit: t.sales - r.refunds - cogs - spent };
   });
 
   const current = rows[rows.length - 1];
@@ -132,6 +161,7 @@ export async function getFinance(supabase: SupabaseClient, month: string) {
     current,
     rows: rows.reverse(),
     expenses: expenses.filter((e) => e.spent_on.startsWith(month)),
+    refunds: refunds.filter((r) => dateKey(r.refunded_at).startsWith(month)),
     orders: orders.filter((order) => dateKey(order.paid_at!).startsWith(month)),
   };
 }

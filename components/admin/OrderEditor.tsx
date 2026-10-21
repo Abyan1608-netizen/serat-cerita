@@ -20,6 +20,14 @@ export default function OrderEditor({
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const [pending, startTransition] = useTransition();
 
+  if (initialStatus === "refunded") {
+    return (
+      <p className="mt-4 rounded-xl bg-rose-50 p-3 text-sm text-rose-900">
+        Dana pesanan ini sudah dikembalikan penuh, jadi statusnya tidak bisa diubah lagi.
+      </p>
+    );
+  }
+
   function save() {
     if ((status === "cancelled" || status === "expired") && status !== initialStatus) {
       if (!confirm("Batalkan pesanan ini? Stok produk akan dikembalikan.")) return;
@@ -35,7 +43,9 @@ export default function OrderEditor({
       <label className={adminLabel}>
         Status
         <select value={status} onChange={(e) => setStatus(e.target.value as OrderStatus)} className={adminInput}>
-          {(Object.keys(orderStatusLabels) as OrderStatus[]).map((value) => (
+          {(Object.keys(orderStatusLabels) as OrderStatus[])
+            .filter((value) => value !== "refunded")
+            .map((value) => (
             <option key={value} value={value}>{orderStatusLabels[value]}</option>
           ))}
         </select>

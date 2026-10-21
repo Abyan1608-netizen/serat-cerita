@@ -111,6 +111,30 @@ create table if not exists public.order_items (
 );
 create index if not exists order_items_order_idx on public.order_items (order_id);
 
+-- Pembaruan untuk database yang sudah ada (aman dijalankan ulang).
+alter table public.orders add column if not exists refunded_total integer not null default 0;
+alter table public.orders drop constraint if exists orders_status_check;
+alter table public.orders add constraint orders_status_check
+  check (status in ('pending_payment', 'paid', 'processing', 'shipped',
+                    'completed', 'cancelled', 'expired', 'refunded'));
+
+-- ---------------------------------------------------------------------
+-- Pengembalian dana (refund)
+-- ---------------------------------------------------------------------
+create table if not exists public.refunds (
+  id uuid primary key default gen_random_uuid(),
+  order_id uuid not null references public.orders (id) on delete cascade,
+  amount integer not null check (amount > 0),
+  method text not null default '',
+  note text not null default '',
+  restocked boolean not null default false,
+  cogs_reversed integer not null default 0,
+  created_by text not null default '',
+  refunded_at timestamptz not null default now()
+);
+create index if not exists refunds_order_idx on public.refunds (order_id);
+create index if not exists refunds_refunded_at_idx on public.refunds (refunded_at desc);
+
 -- ---------------------------------------------------------------------
 -- Pengeluaran (untuk laporan keuangan)
 -- ---------------------------------------------------------------------
@@ -225,6 +249,9 @@ begin
   if not found then
     raise exception 'Pesanan tidak ditemukan';
   end if;
+  if v_order.status = 'refunded' then
+    raise exception 'Dana pesanan ini sudah dikembalikan; statusnya tidak bisa diubah lagi';
+  end if;
 
   v_was_released := v_order.status in ('cancelled', 'expired');
   v_now_released := p_status in ('cancelled', 'expired');
@@ -297,12 +324,84 @@ begin
 end;
 $$;
 
+-- ---------------------------------------------------------------------
+-- Fungsi: catat pengembalian dana (penuh atau sebagian). Hanya admin.
+-- Refund penuh mengubah status menjadi 'refunded' dan (opsional)
+-- mengembalikan stok barang.
+-- ---------------------------------------------------------------------
+create or replace function public.record_refund(
+  p_order_id uuid,
+  p_amount integer,
+  p_method text,
+  p_note text,
+  p_restock boolean,
+  p_created_by text
+)
+returns public.refunds
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_order public.orders;
+  v_refund public.refunds;
+  v_remaining integer;
+  v_full boolean;
+  v_cogs integer := 0;
+begin
+  if not (public.is_admin() or coalesce(auth.role(), '') = 'service_role') then
+    raise exception 'Tidak diizinkan';
+  end if;
+
+  select * into v_order from public.orders where id = p_order_id for update;
+  if not found then
+    raise exception 'Pesanan tidak ditemukan';
+  end if;
+  if v_order.status not in ('paid', 'processing', 'shipped', 'completed') then
+    raise exception 'Hanya pesanan yang sudah dibayar yang bisa direfund';
+  end if;
+
+  v_remaining := v_order.total - v_order.refunded_total;
+  if p_amount is null or p_amount < 1 then
+    raise exception 'Jumlah refund tidak valid';
+  end if;
+  if p_amount > v_remaining then
+    raise exception 'Jumlah refund melebihi sisa yang bisa dikembalikan (Rp %)', v_remaining;
+  end if;
+
+  v_full := p_amount = v_remaining;
+
+  if v_full and p_restock then
+    select coalesce(sum(cost * quantity), 0) into v_cogs
+      from public.order_items where order_id = p_order_id;
+    update public.products p set stock = p.stock + i.quantity, updated_at = now()
+      from public.order_items i
+      where i.order_id = p_order_id and i.product_id = p.id;
+  end if;
+
+  update public.orders
+    set refunded_total = refunded_total + p_amount,
+        status = case when v_full then 'refunded' else status end,
+        updated_at = now()
+    where id = p_order_id;
+
+  insert into public.refunds (order_id, amount, method, note, restocked, cogs_reversed, created_by)
+  values (p_order_id, p_amount, coalesce(p_method, ''), coalesce(p_note, ''),
+          v_full and coalesce(p_restock, false), v_cogs, coalesce(p_created_by, ''))
+  returning * into v_refund;
+
+  return v_refund;
+end;
+$$;
+
 revoke all on function public.place_order(text, text, text, text, text, text, text, integer, jsonb) from public, anon, authenticated;
 grant execute on function public.place_order(text, text, text, text, text, text, text, integer, jsonb) to service_role;
 revoke all on function public.set_order_status(uuid, text, text) from public, anon;
 grant execute on function public.set_order_status(uuid, text, text) to authenticated, service_role;
 revoke all on function public.apply_payment_status(uuid, text, text) from public, anon, authenticated;
 grant execute on function public.apply_payment_status(uuid, text, text) to service_role;
+revoke all on function public.record_refund(uuid, integer, text, text, boolean, text) from public, anon;
+grant execute on function public.record_refund(uuid, integer, text, text, boolean, text) to authenticated, service_role;
 
 -- ---------------------------------------------------------------------
 -- Keamanan baris (Row Level Security)
@@ -315,6 +414,7 @@ alter table public.products enable row level security;
 alter table public.orders enable row level security;
 alter table public.order_items enable row level security;
 alter table public.expenses enable row level security;
+alter table public.refunds enable row level security;
 
 drop policy if exists "admins: admin baca" on public.admins;
 create policy "admins: admin baca" on public.admins
@@ -352,6 +452,10 @@ create policy "orders: admin" on public.orders
 drop policy if exists "order_items: admin" on public.order_items;
 create policy "order_items: admin" on public.order_items
   for all to authenticated using (public.is_admin()) with check (public.is_admin());
+
+drop policy if exists "refunds: admin baca" on public.refunds;
+create policy "refunds: admin baca" on public.refunds
+  for select to authenticated using (public.is_admin());
 
 drop policy if exists "expenses: admin" on public.expenses;
 create policy "expenses: admin" on public.expenses

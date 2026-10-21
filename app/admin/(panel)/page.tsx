@@ -35,8 +35,16 @@ export default async function DashboardPage() {
       <PageHeader title="Ringkasan penjualan" description={`Data bulan ${monthLabel(d.month)} (waktu WIB).`} />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Stat label="Penjualan hari ini" value={formatRupiah(d.today.sales)} hint={`${d.today.orders} pesanan dibayar`} />
-        <Stat label="Penjualan bulan ini" value={formatRupiah(d.thisMonth.sales)} hint={`${d.thisMonth.orders} pesanan · ${d.thisMonth.items} barang`} />
+        <Stat
+          label="Penjualan hari ini"
+          value={formatRupiah(d.today.sales - d.today.refunds)}
+          hint={`${d.today.orders} pesanan dibayar${d.today.refunds ? ` · refund ${formatRupiah(d.today.refunds)}` : ""}`}
+        />
+        <Stat
+          label="Penjualan bulan ini"
+          value={formatRupiah(d.thisMonth.sales - d.thisMonth.refunds)}
+          hint={`${d.thisMonth.orders} pesanan · ${d.thisMonth.items} barang${d.thisMonth.refunds ? ` · refund ${formatRupiah(d.thisMonth.refunds)}` : ""}`}
+        />
         <Stat label="Perlu diproses" value={String(d.toProcess)} hint="Sudah dibayar, belum dikirim" href="/admin/pesanan?status=paid" />
         <Stat label="Menunggu pembayaran" value={String(d.pendingPayment)} href="/admin/pesanan?status=pending_payment" />
       </div>

@@ -136,6 +136,21 @@ Virtual Account ± Rp 4.000 per transaksi — cek tarif terbaru di situs Midtran
 | **Tampilan & Isi** | Ubah **semua tulisan, foto, warna, font, dan ongkir** — ada pratinjau langsung |
 | **Pengaturan** | Status pembayaran, notifikasi Telegram, tambah admin lain, ganti password |
 
+### Mengembalikan dana (refund)
+
+1. Kirim dulu uangnya ke pembeli: transfer bank/e-wallet, atau untuk pembayaran GoPay/QRIS
+   bisa lewat dashboard Midtrans (menu Transactions → pilih transaksi → Refund).
+2. Buka **Admin → Pesanan → (pesanan itu) → Catat refund**. Isi jumlah (penuh atau
+   sebagian) dan cara pengembaliannya.
+3. Untuk refund penuh, centang **Kembalikan stok** bila barangnya kembali/belum dikirim.
+4. Tekan **Kabari pembeli via WhatsApp** untuk memberi tahu pembeli.
+
+Refund otomatis mengurangi laporan keuangan pada bulan dana dikembalikan, muncul di unduhan
+Excel, dan pembeli melihat status **Dana dikembalikan** di halaman pesanannya.
+
+> **Pembaruan database:** fitur refund butuh tabel baru. Jalankan ulang seluruh isi
+> `supabase/schema.sql` di Supabase → SQL Editor (aman diulang, data tidak hilang).
+
 Tips:
 
 - Isi **Modal per barang** di setiap produk agar laporan keuntungan akurat.

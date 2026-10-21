@@ -9,6 +9,7 @@ const tones: Record<OrderStatus, string> = {
   completed: "bg-emerald-50 text-emerald-800 ring-emerald-200",
   cancelled: "bg-stone-100 text-stone-600 ring-stone-200",
   expired: "bg-stone-100 text-stone-600 ring-stone-200",
+  refunded: "bg-rose-50 text-rose-800 ring-rose-200",
 };
 
 export default function StatusBadge({ status }: { status: OrderStatus }) {

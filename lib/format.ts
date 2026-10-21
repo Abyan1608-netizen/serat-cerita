@@ -38,14 +38,19 @@ export const orderStatusLabels: Record<OrderStatus, string> = {
   completed: "Selesai",
   cancelled: "Dibatalkan",
   expired: "Kedaluwarsa",
+  refunded: "Dana dikembalikan",
 };
 
-/** Status yang dihitung sebagai penjualan (uang sudah diterima). */
+/**
+ * Status pesanan yang pernah dibayar. Pesanan "refunded" tetap dihitung sebagai
+ * penjualan pada tanggal bayarnya; refund-nya dikurangkan pada tanggal refund.
+ */
 export const PAID_STATUSES: OrderStatus[] = [
   "paid",
   "processing",
   "shipped",
   "completed",
+  "refunded",
 ];
 
 export function isPaid(status: OrderStatus): boolean {

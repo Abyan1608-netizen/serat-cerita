@@ -4,10 +4,10 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireAdmin } from "@/lib/auth";
-import { slugify } from "@/lib/format";
+import { formatRupiah, slugify } from "@/lib/format";
 import { settingsSchema, type StoreSettings } from "@/lib/settings";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { detectChatId, isTelegramConfigured, sendTestMessage } from "@/lib/telegram";
+import { detectChatId, isTelegramConfigured, notifyOwner, sendTestMessage } from "@/lib/telegram";
 import type { OrderStatus } from "@/lib/types";
 
 export type ActionResult = { ok: true; message?: string; id?: string } | { ok: false; error: string };
@@ -51,6 +51,47 @@ export async function updateOrder(
 
   refreshAll();
   return { ok: true, message: "Pesanan diperbarui" };
+}
+
+const refundSchema = z.object({
+  orderId: z.uuid(),
+  amount: z.number().int().positive("Jumlah refund harus lebih dari 0"),
+  method: z.string().trim().min(1, "Isi cara pengembalian dana").max(120),
+  note: z.string().trim().max(500),
+  restock: z.boolean(),
+});
+
+export async function recordRefund(input: z.input<typeof refundSchema>): Promise<ActionResult> {
+  const { supabase, admin } = await requireAdmin();
+  const parsed = refundSchema.safeParse(input);
+  if (!parsed.success) return fail(parsed.error.issues[0].message);
+  const r = parsed.data;
+
+  const { error } = await supabase.rpc("record_refund", {
+    p_order_id: r.orderId,
+    p_amount: r.amount,
+    p_method: r.method,
+    p_note: r.note,
+    p_restock: r.restock,
+    p_created_by: admin.email,
+  });
+  if (error) return fail(error.message);
+
+  const { data: order } = await supabase
+    .from("orders")
+    .select("code, customer_name, total, refunded_total")
+    .eq("id", r.orderId)
+    .single();
+  if (order) {
+    await notifyOwner([
+      `↩️ **Refund dicatat** — ${order.code}`,
+      `${order.customer_name}: ${formatRupiah(r.amount)} via ${r.method}`,
+      `Total dikembalikan: ${formatRupiah(order.refunded_total)} dari ${formatRupiah(order.total)}`,
+    ]);
+  }
+
+  refreshAll();
+  return { ok: true, message: "Refund dicatat" };
 }
 
 // ---------------------------------------------------------------- Produk

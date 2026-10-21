@@ -2,7 +2,7 @@ import { getAdmin } from "@/lib/auth";
 import { dateKey, orderStatusLabels, PAID_STATUSES } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
 import { currentMonth, shiftMonth } from "@/lib/reports";
-import type { Expense, Order } from "@/lib/types";
+import type { Expense, Order, Refund } from "@/lib/types";
 
 function csvCell(value: string | number | null | undefined): string {
   const text = String(value ?? "");
@@ -18,7 +18,7 @@ export async function GET(request: Request) {
   const to = `${shiftMonth(month, 1)}-01T00:00:00+07:00`;
 
   const supabase = await createClient();
-  const [{ data: orders }, { data: expenses }] = await Promise.all([
+  const [{ data: orders }, { data: expenses }, { data: refunds }] = await Promise.all([
     supabase
       .from("orders")
       .select("*, order_items(*)")
@@ -32,6 +32,12 @@ export async function GET(request: Request) {
       .gte("spent_on", `${month}-01`)
       .lt("spent_on", `${shiftMonth(month, 1)}-01`)
       .order("spent_on"),
+    supabase
+      .from("refunds")
+      .select("*, order:orders(code, customer_name)")
+      .gte("refunded_at", from)
+      .lt("refunded_at", to)
+      .order("refunded_at"),
   ]);
 
   const rows: (string | number | null)[][] = [
@@ -50,6 +56,17 @@ export async function GET(request: Request) {
       items.reduce((sum, i) => sum + i.cost * i.quantity, 0),
       order.shipping_cost,
       order.total,
+    ]);
+  }
+  rows.push([], ["REFUND"], ["Tanggal", "Kode", "Pembeli", "Cara pengembalian", "Catatan", "Jumlah"]);
+  for (const refund of (refunds ?? []) as (Refund & { order: { code: string; customer_name: string } | null })[]) {
+    rows.push([
+      dateKey(refund.refunded_at),
+      refund.order?.code ?? "",
+      refund.order?.customer_name ?? "",
+      refund.method,
+      refund.note,
+      refund.amount,
     ]);
   }
   rows.push([], ["PENGELUARAN"], ["Tanggal", "Jenis", "Keterangan", "Jumlah"]);

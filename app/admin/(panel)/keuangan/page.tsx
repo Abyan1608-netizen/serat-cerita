@@ -53,13 +53,15 @@ export default async function FinancePage(props: PageProps<"/admin/keuangan">) {
         <section className={`${adminCard} text-sm`}>
           <h2 className="mb-2 font-semibold">Laba rugi</h2>
           <Line label={`Penjualan produk (${c.orders} pesanan, ${c.items} barang)`} value={c.sales} />
+          <Line label="Pengembalian dana (refund)" value={c.refunds} negative />
           <Line label="Modal barang terjual (HPP)" value={c.cogs} negative />
-          <Line label="Laba kotor" value={c.sales - c.cogs} strong />
+          <Line label="Laba kotor" value={c.sales - c.refunds - c.cogs} strong />
           <Line label="Pengeluaran" value={c.expenses} negative />
           <Line label="Laba bersih" value={c.profit} strong />
           <p className="mt-4 text-xs leading-5 text-stone-500">
             Ongkir yang dibayar pembeli ({formatRupiah(c.shipping)}) tidak dihitung sebagai laba karena diteruskan ke kurir.
-            Bila ada selisih ongkir, catat sebagai pengeluaran.
+            Bila ada selisih ongkir, catat sebagai pengeluaran. Refund dihitung pada bulan dana dikembalikan;
+            bila stok dikembalikan, modal barangnya tidak dihitung sebagai HPP.
           </p>
         </section>
 
@@ -68,12 +70,13 @@ export default async function FinancePage(props: PageProps<"/admin/keuangan">) {
 
       <section className={`${adminCard} mt-6 overflow-x-auto`}>
         <h2 className="mb-4 font-semibold">12 bulan terakhir</h2>
-        <table className="w-full min-w-[640px] text-right text-sm">
+        <table className="w-full min-w-[720px] text-right text-sm">
           <thead className="text-xs uppercase tracking-wide text-stone-500">
             <tr>
               <th className="py-2 text-left font-medium">Bulan</th>
               <th className="py-2 font-medium">Pesanan</th>
               <th className="py-2 font-medium">Penjualan</th>
+              <th className="py-2 font-medium">Refund</th>
               <th className="py-2 font-medium">HPP</th>
               <th className="py-2 font-medium">Pengeluaran</th>
               <th className="py-2 font-medium">Laba bersih</th>
@@ -87,6 +90,7 @@ export default async function FinancePage(props: PageProps<"/admin/keuangan">) {
                 </td>
                 <td className="py-2.5">{row.orders}</td>
                 <td className="py-2.5">{formatRupiah(row.sales)}</td>
+                <td className="py-2.5">{formatRupiah(row.refunds)}</td>
                 <td className="py-2.5">{formatRupiah(row.cogs)}</td>
                 <td className="py-2.5">{formatRupiah(row.expenses)}</td>
                 <td className={`py-2.5 ${row.profit < 0 ? "text-red-700" : ""}`}>{formatRupiah(row.profit)}</td>
@@ -95,6 +99,32 @@ export default async function FinancePage(props: PageProps<"/admin/keuangan">) {
           </tbody>
         </table>
       </section>
+
+      {f.refunds.length > 0 && (
+        <section className={`${adminCard} mt-6 overflow-x-auto`}>
+          <h2 className="mb-4 font-semibold">Refund bulan ini</h2>
+          <table className="w-full min-w-[560px] text-sm">
+            <tbody className="divide-y divide-stone-100">
+              {f.refunds.map((refund) => (
+                <tr key={refund.id}>
+                  <td className="py-2.5">
+                    <Link href={`/admin/pesanan/${refund.order_id}`} className="hover:underline">
+                      {refund.order?.code ?? "—"}
+                    </Link>
+                    <p className="text-xs text-stone-500">{refund.order?.customer_name}</p>
+                  </td>
+                  <td className="py-2.5 text-stone-600">
+                    {refund.method}
+                    {refund.note && <p className="text-xs text-stone-500">{refund.note}</p>}
+                  </td>
+                  <td className="py-2.5 text-stone-500">{formatDate(refund.refunded_at, true)}</td>
+                  <td className="py-2.5 text-right tabular-nums">{formatRupiah(refund.amount)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      )}
 
       <section className={`${adminCard} mt-6 overflow-x-auto`}>
         <h2 className="mb-4 font-semibold">Pesanan dibayar bulan ini</h2>

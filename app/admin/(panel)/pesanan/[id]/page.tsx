@@ -2,12 +2,13 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ExternalLink, MessageCircle } from "lucide-react";
 import OrderEditor from "@/components/admin/OrderEditor";
+import RefundPanel from "@/components/admin/RefundPanel";
 import StatusBadge from "@/components/admin/StatusBadge";
 import { adminButtonOutline, adminCard } from "@/components/admin/ui";
 import { requireAdmin } from "@/lib/auth";
-import { formatDate, formatRupiah, whatsappLink } from "@/lib/format";
+import { formatDate, formatRupiah, isPaid, whatsappLink } from "@/lib/format";
 import { syncPendingOrder } from "@/lib/orders";
-import type { Order } from "@/lib/types";
+import type { Order, Refund } from "@/lib/types";
 
 export const metadata = { title: "Detail pesanan" };
 
@@ -17,6 +18,12 @@ export default async function OrderDetailPage(props: PageProps<"/admin/pesanan/[
   const { data } = await supabase.from("orders").select("*, order_items(*)").eq("id", id).maybeSingle();
   if (!data) notFound();
   const order = await syncPendingOrder(data as Order);
+  const { data: refundRows } = await supabase
+    .from("refunds")
+    .select("*")
+    .eq("order_id", order.id)
+    .order("refunded_at");
+  const refunds = (refundRows ?? []) as Refund[];
 
   const hpp = (order.order_items ?? []).reduce((sum, item) => sum + item.cost * item.quantity, 0);
 
@@ -50,6 +57,12 @@ export default async function OrderDetailPage(props: PageProps<"/admin/pesanan/[
                 <span>Total</span>
                 <span className="tabular-nums">{formatRupiah(order.total)}</span>
               </li>
+              {order.refunded_total > 0 && (
+                <li className="flex justify-between gap-4 py-2.5 text-rose-700">
+                  <span>Dikembalikan (refund)</span>
+                  <span className="tabular-nums">−{formatRupiah(order.refunded_total)}</span>
+                </li>
+              )}
             </ul>
             <p className="mt-2 text-xs text-stone-500">
               Modal (HPP) barang: {formatRupiah(hpp)} · Untung kotor: {formatRupiah(order.subtotal - hpp)}
@@ -101,6 +114,15 @@ export default async function OrderDetailPage(props: PageProps<"/admin/pesanan/[
               Membatalkan pesanan akan mengembalikan stok produk secara otomatis.
             </p>
             <OrderEditor orderId={order.id} status={order.status} trackingNumber={order.tracking_number ?? ""} />
+          </section>
+
+          <section className={adminCard}>
+            <h2 className="font-semibold">Pengembalian dana (refund)</h2>
+            <RefundPanel
+              order={order}
+              refunds={refunds}
+              canRefund={isPaid(order.status) && order.status !== "refunded"}
+            />
           </section>
 
           <section className={`${adminCard} text-sm`}>

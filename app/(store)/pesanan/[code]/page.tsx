@@ -20,7 +20,7 @@ export default async function OrderPage(props: PageProps<"/pesanan/[code]">) {
   const [order, settings] = await Promise.all([syncPendingOrder(found), getSettings()]);
   const wa = settings.store.whatsapp;
   const current = steps.indexOf(order.status as (typeof steps)[number]);
-  const closed = order.status === "cancelled" || order.status === "expired";
+  const closed = ["cancelled", "expired", "refunded"].includes(order.status);
 
   return (
     <section className="px-6 py-16 lg:px-10 lg:py-20">
@@ -80,6 +80,18 @@ export default async function OrderPage(props: PageProps<"/pesanan/[code]">) {
                 )}
               </>
             )}
+          </div>
+        )}
+
+        {order.refunded_total > 0 && (
+          <div className="mt-8 rounded-[1.5rem] border border-line bg-surface p-6 text-sm">
+            <p className="font-medium">
+              Dana dikembalikan: {formatRupiah(order.refunded_total)}
+              {order.refunded_total < order.total && ` dari ${formatRupiah(order.total)}`}
+            </p>
+            <p className="mt-1 text-ink-muted">
+              Pengembalian dana sudah kami proses. Jika belum diterima, hubungi kami dengan menyebutkan kode pesanan.
+            </p>
           </div>
         )}
 

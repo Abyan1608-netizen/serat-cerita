@@ -34,7 +34,8 @@ export type OrderStatus =
   | "shipped"
   | "completed"
   | "cancelled"
-  | "expired";
+  | "expired"
+  | "refunded";
 
 export type OrderItem = {
   id: string;
@@ -62,10 +63,24 @@ export type Order = {
   payment_method: string | null;
   payment_url: string | null;
   tracking_number: string | null;
+  /** Jumlah dana yang sudah dikembalikan ke pembeli. */
+  refunded_total: number;
   paid_at: string | null;
   created_at: string;
   updated_at: string;
   order_items?: OrderItem[];
+};
+
+export type Refund = {
+  id: string;
+  order_id: string;
+  amount: number;
+  method: string;
+  note: string;
+  restocked: boolean;
+  cogs_reversed: number;
+  created_by: string;
+  refunded_at: string;
 };
 
 export type Expense = {
