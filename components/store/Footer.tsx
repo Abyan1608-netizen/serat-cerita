@@ -15,6 +15,7 @@ export default function Footer({ settings }: { settings: StoreSettings }) {
           <nav className="mt-6 flex flex-wrap gap-x-6 gap-y-2 text-sm opacity-75">
             <Link href="/produk" className="hover:opacity-100">Produk</Link>
             <Link href="/lacak" className="hover:opacity-100">Lacak Pesanan</Link>
+            <Link href="/kontak" className="hover:opacity-100">Kontak</Link>
             {store.whatsapp && (
               <a href={whatsappLink(store.whatsapp)} target="_blank" rel="noopener noreferrer" className="hover:opacity-100">
                 WhatsApp
@@ -38,9 +39,16 @@ export default function Footer({ settings }: { settings: StoreSettings }) {
           </nav>
         </div>
 
-        <p className="text-xs opacity-60">
-          © {new Date().getFullYear()} {store.name}
-        </p>
+        <div className="flex flex-col gap-2 text-xs opacity-60 sm:items-end">
+          <nav className="flex flex-wrap gap-x-4 gap-y-1">
+            <Link href="/info/syarat-ketentuan" className="hover:opacity-100">Syarat & Ketentuan</Link>
+            <Link href="/info/kebijakan-pengembalian" className="hover:opacity-100">Kebijakan Pengembalian</Link>
+            <Link href="/info/kebijakan-privasi" className="hover:opacity-100">Kebijakan Privasi</Link>
+          </nav>
+          <p>
+            © {new Date().getFullYear()} {store.name}
+          </p>
+        </div>
       </div>
     </footer>
   );

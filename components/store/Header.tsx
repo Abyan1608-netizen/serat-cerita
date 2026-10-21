@@ -11,6 +11,7 @@ const navLinks = [
   { href: "/#custom", label: "Custom" },
   { href: "/#cerita", label: "Cerita" },
   { href: "/lacak", label: "Lacak Pesanan" },
+  { href: "/kontak", label: "Kontak" },
 ];
 
 const iconButton =

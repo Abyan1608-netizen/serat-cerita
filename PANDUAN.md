@@ -105,6 +105,12 @@ Notifikasi "Pesanan baru" dan "Pembayaran diterima" akan masuk ke Telegram.
 
 ## 6. Beralih ke pembayaran sungguhan
 
+> **Sebelum mengajukan ke Midtrans**, pastikan website sudah memenuhi syarat yang biasanya
+> diperiksa: produk tampil dengan foto & harga, halaman **Kontak** berisi nomor WA, email,
+> dan alamat (isi di Admin → Tampilan & Isi → Identitas toko), serta halaman
+> **Syarat & Ketentuan**, **Kebijakan Pengembalian**, dan **Kebijakan Privasi**
+> (Admin → Tampilan & Isi → Kebijakan). Link ke semuanya ada di bagian bawah website.
+
 1. Di dashboard Midtrans, lengkapi data dan dokumen (KTP, rekening) sampai akun
    **Production** disetujui.
 2. Pindah ke mode **Production** (pojok kiri atas), buka **Settings → Access Keys**,

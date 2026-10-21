@@ -147,7 +147,12 @@ export default function CheckoutForm({
             {pending ? "Memproses…" : "Bayar sekarang"}
           </button>
         )}
-        {note && <p className="mt-4 text-xs leading-5 text-ink-muted">{note}</p>}
+        <p className="mt-4 text-xs leading-5 text-ink-muted">
+          Dengan menekan Bayar sekarang, Anda menyetujui{" "}
+          <Link href="/info/syarat-ketentuan" className="underline">Syarat & Ketentuan</Link> dan{" "}
+          <Link href="/info/kebijakan-pengembalian" className="underline">Kebijakan Pengembalian</Link>.
+        </p>
+        {note && <p className="mt-2 text-xs leading-5 text-ink-muted">{note}</p>}
       </aside>
     </form>
   );

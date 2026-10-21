@@ -25,6 +25,8 @@ export const settingsSchema = z.object({
     whatsapp: text(20).regex(/^\d*$/, "Nomor WhatsApp hanya angka"),
     instagram: text(60),
     email: text(120),
+    address: text(300),
+    hours: text(120),
   }),
   hero: z.object({
     eyebrow: text(80),
@@ -57,6 +59,11 @@ export const settingsSchema = z.object({
   }),
   footer: z.object({
     tagline: text(120),
+  }),
+  policies: z.object({
+    terms: text(10000),
+    refund: text(10000),
+    privacy: text(10000),
   }),
   checkout: z.object({
     note: text(400),
@@ -157,6 +164,8 @@ export const defaultSettings: StoreSettings = {
     whatsapp: "6289669406611",
     instagram: "",
     email: "",
+    address: "",
+    hours: "Senin – Sabtu, 09.00 – 17.00 WIB",
   },
   hero: {
     eyebrow: "HANDMADE · SLOW MADE · MEANINGFUL",
@@ -189,6 +198,53 @@ export const defaultSettings: StoreSettings = {
   },
   footer: {
     tagline: "Handmade with intention.",
+  },
+  policies: {
+    terms: `1. Pemesanan
+Pesanan dibuat melalui website ini dengan memilih produk, mengisi data pengiriman, dan menyelesaikan pembayaran. Setiap pesanan mendapat kode pesanan untuk dilacak di halaman Lacak Pesanan.
+
+2. Harga
+Semua harga dalam Rupiah (IDR) dan belum termasuk ongkos kirim. Ongkos kirim ditampilkan sebelum pembayaran.
+
+3. Pembayaran
+Pembayaran diproses secara aman oleh Midtrans (QRIS, transfer Virtual Account, dan e-wallet). Pesanan yang tidak dibayar dalam 24 jam dibatalkan otomatis.
+
+4. Produk handmade
+Setiap produk dirajut tangan, sehingga warna dan ukuran dapat sedikit berbeda dari foto. Perbedaan kecil ini bukan cacat produk.
+
+5. Pesanan custom
+Pesanan custom dikonfirmasi lebih dulu melalui WhatsApp, termasuk harga dan waktu pengerjaan.
+
+6. Pengiriman
+Pesanan diproses 1–3 hari kerja setelah pembayaran diterima, lalu dikirim melalui kurir. Nomor resi dapat dilihat di halaman status pesanan.
+
+7. Kontak
+Pertanyaan seputar pesanan dapat disampaikan melalui kontak yang tercantum di halaman Kontak.`,
+    refund: `1. Barang rusak atau salah kirim
+Jika barang yang diterima rusak atau tidak sesuai pesanan, hubungi kami melalui WhatsApp paling lambat 3 x 24 jam sejak barang diterima, dengan menyertakan kode pesanan serta foto/video saat membuka paket.
+
+2. Penyelesaian
+Setelah laporan diperiksa, kami akan mengirim barang pengganti atau mengembalikan dana. Pengembalian dana dilakukan ke rekening pembeli paling lambat 7 hari kerja setelah disetujui.
+
+3. Pembatalan pesanan
+Pesanan yang sudah dibayar tetapi belum diproses dapat dibatalkan dengan menghubungi kami, dan dana dikembalikan penuh.
+
+4. Pengecualian
+Pesanan custom tidak dapat dikembalikan kecuali terdapat cacat produksi. Perbedaan kecil warna atau ukuran karena sifat produk handmade tidak termasuk alasan pengembalian.`,
+    privacy: `1. Data yang kami kumpulkan
+Saat memesan, kami mengumpulkan nama, nomor WhatsApp, email (opsional), dan alamat pengiriman.
+
+2. Penggunaan data
+Data hanya digunakan untuk memproses, mengirim, dan mengonfirmasi pesanan, serta menghubungi Anda terkait pesanan tersebut.
+
+3. Pembayaran
+Pembayaran diproses oleh Midtrans. Kami tidak menerima maupun menyimpan data kartu atau rekening Anda.
+
+4. Berbagi data
+Kami tidak menjual atau membagikan data Anda kepada pihak lain, kecuali kepada kurir untuk keperluan pengiriman dan kepada Midtrans untuk keperluan pembayaran.
+
+5. Hak Anda
+Anda dapat meminta data Anda diubah atau dihapus dengan menghubungi kami.`,
   },
   checkout: {
     note: "Pesanan diproses 1–3 hari kerja setelah pembayaran diterima.",
